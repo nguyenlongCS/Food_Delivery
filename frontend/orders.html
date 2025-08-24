@@ -1,0 +1,47 @@
+       <!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Đơn Hàng Của Tôi</title>
+  <link rel="stylesheet" href="cart.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <h1>📦 Đơn Hàng Của Tôi</h1>
+      <a href="home.html" class="back-btn">← Quay Lại</a>
+    </div>
+  </div>
+  <div class="container">
+    <div id="order-list"></div>
+  </div>
+<script>
+const API_BASE_URL = 'http://localhost:5000/api';
+let currentUser = null;
+
+function checkAuth() {
+  const user = localStorage.getItem('user');
+  if (!user) { window.location.href = 'index.html'; return; }
+  currentUser = JSON.parse(user);
+}
+
+async function loadOrders() {
+  const res = await fetch(`${API_BASE_URL}/orders/user/${currentUser.id}`);
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('order-list').innerHTML = data.orders.map(o => `
+      <div class="cart-item">
+        <div><b>Mã đơn:</b> #${o.id}</div>
+        <div><b>Ngày:</b> ${o.created_at}</div>
+        <div><b>Tổng:</b> ${o.total_amount.toLocaleString('vi-VN')} VNĐ</div>
+        <div><b>Trạng thái:</b> ${o.status}</div>
+      </div>
+    `).join('');
+  }
+}
+
+checkAuth();
+loadOrders();
+</script>
+</body>
+</html>
