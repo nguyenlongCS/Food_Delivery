@@ -271,6 +271,58 @@ def create_order():
         db.close()
 
 
+# Lấy đơn hàng của 1 user (khách hàng)
+@app.route("/api/orders/user/<int:user_id>", methods=["GET"])
+def get_user_orders(user_id):
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT o.id, o.total_amount, o.status, o.created_at
+            FROM orders o
+            WHERE o.user_id = %s
+            ORDER BY o.created_at DESC
+        """, (user_id,))
+        orders = cursor.fetchall()
+        return jsonify({"success": True, "orders": orders})
+    finally:
+        cursor.close()
+        db.close()
+
+# Lấy tất cả đơn hàng (cho nhà hàng)
+@app.route("/api/orders/restaurant", methods=["GET"])
+def get_restaurant_orders():
+    try:
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT o.id, u.username, o.total_amount, o.status, o.created_at
+            FROM orders o
+            JOIN user u ON o.user_id = u.id
+            ORDER BY o.created_at DESC
+        """)
+        orders = cursor.fetchall()
+        return jsonify({"success": True, "orders": orders})
+    finally:
+        cursor.close()
+        db.close()
+
+# Nhà hàng xác nhận/hủy đơn
+@app.route("/api/orders/<int:order_id>/status", methods=["PUT"])
+def update_order_status(order_id):
+    data = request.json
+    status = data.get("status")  # 'confirmed' hoặc 'cancelled'
+
+    try:
+        db = get_db_connection()
+        cursor = db.cursor()
+        cursor.execute("UPDATE orders SET status=%s WHERE id=%s", (status, order_id))
+        db.commit()
+        return jsonify({"success": True, "message": "Cập nhật trạng thái thành công!"})
+    finally:
+        cursor.close()
+        db.close()
+
 # -------------------------
 # Run app
 # -------------------------
