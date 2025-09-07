@@ -267,7 +267,7 @@ def create_order():
         for restaurant, items in restaurant_groups.items():
             total_amount = sum(i["price"] * i["quantity"] for i in items)
             cursor.execute(
-                "INSERT INTO orders (user_id, restaurant_id, total_amount, status) VALUES (%s, %s, %s, 'pending')",
+                "INSERT INTO orders (user_id, restaurant, total_amount, status) VALUES (%s, %s, %s, 'pending')",
                 (user_id, restaurant, total_amount)
             )
             order_id = cursor.lastrowid
@@ -309,8 +309,8 @@ def get_user_orders(user_id):
         db.close()
 
 # Lấy tất cả đơn hàng (cho nhà hàng)
-@app.route("/api/orders/restaurant", methods=["GET"])
-def get_restaurant_orders():
+@app.route("/api/orders/restaurant/<restaurant_name>", methods=["GET"])
+def get_restaurant_orders(restaurant_name):
     try:
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
@@ -318,8 +318,9 @@ def get_restaurant_orders():
             SELECT o.id, u.username, o.total_amount, o.status, o.created_at
             FROM orders o
             JOIN user u ON o.user_id = u.id
+            WHERE o.restaurant = %s
             ORDER BY o.created_at DESC
-        """)
+        """, (restaurant_name,))
         orders = cursor.fetchall()
         return jsonify({"success": True, "orders": orders})
     finally:
