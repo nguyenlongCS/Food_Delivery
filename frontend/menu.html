@@ -1,0 +1,246 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="vi">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>Thực Đơn - Food Delivery</title>-->
+<!--    <link rel="stylesheet" href="menu.css">-->
+<!--</head>-->
+<!--<body>-->
+<!--    <div class="header">-->
+<!--        <div class="header-content">-->
+<!--            <h1>🍽️ Thực Đơn Đầy Đủ</h1>-->
+<!--            <a href="home.html" class="back-btn">← Quay Lại</a>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    <div class="container">-->
+<!--        <div class="menu-controls">-->
+<!--            <div class="search-section">-->
+<!--                <div class="search-icon">🔍</div>-->
+<!--                <input type="text" class="search-box" id="searchInput" placeholder="Tìm kiếm món ăn, nhà hàng...">-->
+<!--            </div>-->
+
+<!--            <div class="filters">-->
+<!--                <div class="filter-group">-->
+<!--                    <label class="filter-label">Khoảng cách</label>-->
+<!--                    <select class="filter-select" id="distanceFilter">-->
+<!--                        <option value="">Tất cả</option>-->
+<!--                        <option value="near">Gần nhất (&lt; 2km)</option>-->
+<!--                        <option value="medium">Trung bình (2-5km)</option>-->
+<!--                        <option value="far">Xa (&gt; 5km)</option>-->
+<!--                    </select>-->
+<!--                </div>-->
+
+<!--                <div class="filter-group">-->
+<!--                    <label class="filter-label">Sắp xếp</label>-->
+<!--                    <select class="filter-select" id="sortFilter">-->
+<!--                        <option value="popular">Bán chạy</option>-->
+<!--                        <option value="rating">Đánh giá cao</option>-->
+<!--                        <option value="price-low">Giá thấp → cao</option>-->
+<!--                        <option value="price-high">Giá cao → thấp</option>-->
+<!--                        <option value="distance">Khoảng cách</option>-->
+<!--                    </select>-->
+<!--                </div>-->
+
+<!--                <div class="filter-group">-->
+<!--                    <label class="filter-label">Giá</label>-->
+<!--                    <select class="filter-select" id="priceFilter">-->
+<!--                        <option value="">Tất cả</option>-->
+<!--                        <option value="budget">Tiết kiệm (&lt; 200k)</option>-->
+<!--                        <option value="medium">Trung bình (200k-400k)</option>-->
+<!--                        <option value="premium">Cao cấp (&gt; 400k)</option>-->
+<!--                    </select>-->
+<!--                </div>-->
+
+<!--                <div class="filter-group">-->
+<!--                    <label class="filter-label">Đánh giá</label>-->
+<!--                    <select class="filter-select" id="ratingFilter">-->
+<!--                        <option value="">Tất cả</option>-->
+<!--                        <option value="5">⭐⭐⭐⭐⭐</option>-->
+<!--                        <option value="4">⭐⭐⭐⭐+ trở lên</option>-->
+<!--                        <option value="3">⭐⭐⭐+ trở lên</option>-->
+<!--                    </select>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        <div class="menu-grid" id="menuGrid">-->
+<!--            &lt;!&ndash; Menu items will be loaded here &ndash;&gt;-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    <script>-->
+<!--        const API_BASE_URL = 'http://localhost:5000/api';-->
+<!--        let menuItems = [];-->
+<!--        let filteredItems = [];-->
+<!--        let currentUser = null;-->
+
+<!--        // Check authentication-->
+<!--        function checkAuth() {-->
+<!--            const user = localStorage.getItem('user');-->
+<!--            if (!user) {-->
+<!--                window.location.href = 'index.html';-->
+<!--                return;-->
+<!--            }-->
+<!--            currentUser = JSON.parse(user);-->
+<!--        }-->
+
+<!--        // Load menu items-->
+<!--        async function loadMenu() {-->
+<!--            try {-->
+<!--                const response = await fetch(`${API_BASE_URL}/menu`);-->
+<!--                const data = await response.json();-->
+<!--                if (data.success) {-->
+<!--                    menuItems = data.items;-->
+<!--                    filteredItems = [...menuItems];-->
+<!--                    renderMenu();-->
+<!--                }-->
+<!--            } catch (error) {-->
+<!--                console.error('Error loading menu:', error);-->
+<!--            }-->
+<!--        }-->
+
+<!--        function renderMenu() {-->
+<!--            const menuGrid = document.getElementById('menuGrid');-->
+
+<!--            if (filteredItems.length === 0) {-->
+<!--                menuGrid.innerHTML = `-->
+<!--                    <div class="no-results">-->
+<!--                        <div class="no-results-icon">🔍</div>-->
+<!--                        <h3>Không tìm thấy món ăn nào</h3>-->
+<!--                        <p>Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc</p>-->
+<!--                    </div>-->
+<!--                `;-->
+<!--                return;-->
+<!--            }-->
+
+<!--            menuGrid.innerHTML = filteredItems.map(item => `-->
+<!--                <div class="menu-item" onclick="addToCart(${item.id}, '${item.name}', ${item.price})">-->
+<!--                    ${item.badge ? `<div class="item-badge ${item.badge}">${item.badge === 'popular' ? '🔥 Bán chạy' : '🆕 Mới'}</div>` : ''}-->
+<!--                    <img src="http://localhost:5000/${item.image}" alt="${item.name}">-->
+<!--                    <div class="item-content">-->
+<!--                        <div class="item-header">-->
+<!--                            <div>-->
+<!--                                <div class="item-name">${item.name}</div>-->
+<!--                                <div class="item-restaurant">📍 ${item.restaurant}</div>-->
+<!--                                <div class="item-rating">-->
+<!--                                    <span class="stars">${'⭐'.repeat(Math.floor(item.rating))}</span>-->
+<!--                                    <span class="rating-text">${item.rating} (${item.reviews} đánh giá)</span>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                        <div class="item-description">${item.description}</div>-->
+<!--                        <div class="item-details">-->
+<!--                            <div class="delivery-time">⏰ ${item.delivery_time} phút</div>-->
+<!--                            <div class="delivery-distance">📍 ${item.distance}km</div>-->
+<!--                        </div>-->
+<!--                        <div class="item-footer">-->
+<!--                            <div class="item-price">${item.price.toLocaleString('vi-VN')} ₫</div>-->
+<!--                            <button class="add-btn" onclick="event.stopPropagation(); addToCart(${item.id}, '${item.name}', ${item.price})">-->
+<!--                                ➕ Thêm-->
+<!--                            </button>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            `).join('');-->
+<!--        }-->
+
+<!--        function filterAndSort() {-->
+<!--            const searchTerm = document.getElementById('searchInput').value.toLowerCase();-->
+<!--            const distanceFilter = document.getElementById('distanceFilter').value;-->
+<!--            const sortFilter = document.getElementById('sortFilter').value;-->
+<!--            const priceFilter = document.getElementById('priceFilter').value;-->
+<!--            const ratingFilter = document.getElementById('ratingFilter').value;-->
+
+<!--            // Filter by search term-->
+<!--            filteredItems = menuItems.filter(item =>-->
+<!--                item.name.toLowerCase().includes(searchTerm) ||-->
+<!--                item.restaurant.toLowerCase().includes(searchTerm) ||-->
+<!--                item.description.toLowerCase().includes(searchTerm)-->
+<!--            );-->
+
+<!--            // Filter by distance-->
+<!--            if (distanceFilter) {-->
+<!--                filteredItems = filteredItems.filter(item => {-->
+<!--                    switch (distanceFilter) {-->
+<!--                        case 'near': return item.distance < 2;-->
+<!--                        case 'medium': return item.distance >= 2 && item.distance <= 5;-->
+<!--                        case 'far': return item.distance > 5;-->
+<!--                        default: return true;-->
+<!--                    }-->
+<!--                });-->
+<!--            }-->
+
+<!--            // Filter by price-->
+<!--            if (priceFilter) {-->
+<!--                filteredItems = filteredItems.filter(item => {-->
+<!--                    switch (priceFilter) {-->
+<!--                        case 'budget': return item.price < 200000;-->
+<!--                        case 'medium': return item.price >= 200000 && item.price <= 400000;-->
+<!--                        case 'premium': return item.price > 400000;-->
+<!--                        default: return true;-->
+<!--                    }-->
+<!--                });-->
+<!--            }-->
+
+<!--            // Filter by rating-->
+<!--            if (ratingFilter) {-->
+<!--                const minRating = parseInt(ratingFilter);-->
+<!--                filteredItems = filteredItems.filter(item => item.rating >= minRating);-->
+<!--            }-->
+
+<!--            // Sort items-->
+<!--            filteredItems.sort((a, b) => {-->
+<!--                switch (sortFilter) {-->
+<!--                    case 'popular':-->
+<!--                        return b.reviews - a.reviews;-->
+<!--                    case 'rating':-->
+<!--                        return b.rating - a.rating;-->
+<!--                    case 'price-low':-->
+<!--                        return a.price - b.price;-->
+<!--                    case 'price-high':-->
+<!--                        return b.price - a.price;-->
+<!--                    case 'distance':-->
+<!--                        return a.distance - b.distance;-->
+<!--                    default:-->
+<!--                        return 0;-->
+<!--                }-->
+<!--            });-->
+
+<!--            renderMenu();-->
+<!--        }-->
+
+<!--        async function addToCart(itemId, itemName, price) {-->
+<!--            try {-->
+<!--                const response = await fetch(`${API_BASE_URL}/cart`, {-->
+<!--                    method: 'POST',-->
+<!--                    headers: { 'Content-Type': 'application/json' },-->
+<!--                    body: JSON.stringify({-->
+<!--                        user_id: currentUser.id,-->
+<!--                        item_id: itemId,-->
+<!--                        quantity: 1-->
+<!--                    })-->
+<!--                });-->
+
+<!--                const data = await response.json();-->
+<!--                if (data.success) {-->
+<!--                    alert(`🎉 ${itemName} đã được thêm vào giỏ hàng!\nGiá: ${price.toLocaleString('vi-VN')} ₫`);-->
+<!--                } else {-->
+<!--                    alert(data.message);-->
+<!--                }-->
+<!--            } catch (error) {-->
+<!--                alert('Lỗi khi thêm vào giỏ hàng');-->
+<!--            }-->
+<!--        }-->
+
+<!--        // Event listeners-->
+<!--        document.getElementById('searchInput').addEventListener('input', filterAndSort);-->
+<!--        document.getElementById('distanceFilter').addEventListener('change', filterAndSort);-->
+<!--        document.getElementById('sortFilter').addEventListener('change', filterAndSort);-->
+<!--        document.getElementById('priceFilter').addEventListener('change', filterAndSort);-->
+<!--        document.getElementById('ratingFilter').addEventListener('change', filterAndSort);-->
+
+<!--        // Initialize page-->
+<!--        checkAuth();-->
+<!--        loadMenu()-->
