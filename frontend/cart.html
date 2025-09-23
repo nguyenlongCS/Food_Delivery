@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giỏ Hàng - Food Delivery</title>
+    <link rel="stylesheet" href="cart.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🛒 Giỏ Hàng Của Bạn</h1>
+            <a href="home.html" class="back-btn">← Quay Lại</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="cart-container">
+            <div class="cart-items">
+                <h2>🍔 Món Đã Chọn</h2>
+                <div id="cart-list">
+                    <!-- Cart items will be loaded here -->
+                </div>
+                <div id="empty-cart" class="empty-cart" style="display: none;">
+                    <div class="empty-cart-icon">🛒</div>
+                    <h3>Giỏ hàng của bạn đang trống</h3>
+                    <p>Hãy thêm một số món ngon vào giỏ hàng!</p>
+                    <a href="menu.html" class="continue-shopping">Tiếp Tục Mua Sắm</a>
+                </div>
+            </div>
+
+            <div class="cart-summary">
+                <h3>💰 Tóm Tắt Đơn Hàng</h3>
+                <div class="summary-row">
+                    <span>Tạm tính:</span>
+                    <span id="subtotal">0 VNĐ</span>
+                </div>
+                <div class="summary-row">
+                    <span>Phí giao hàng:</span>
+                    <span>30.000 VNĐ</span>
+                </div>
+                <div class="summary-row">
+                    <span>Giảm giá:</span>
+                    <span style="color: #10ac84;">-0 VNĐ</span>
+                </div>
+                <div class="summary-row total">
+                    <span>Tổng cộng:</span>
+                    <span id="total">30.000 VNĐ</span>
+                </div>
+                <button class="checkout-btn" onclick="checkout()">
+                    🚀 Thanh Toán Ngay
+                </button>
+                <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: #666;">
+                    💳 Thanh toán an toàn & bảo mật
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        let cartItems = [];
+        let currentUser = null;
+
+        // Check authentication
+        function checkAuth() {
+            const user = localStorage.getItem('user');
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            currentUser = JSON.parse(user);
+        }
+
+        // Load cart items
+        async function loadCart() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/cart/${currentUser.id}`);
+                const data = await response.json();
+                if (data.success) {
+                    cartItems = data.items;
+                    renderCart();
+                }
+            } catch (error) {
+                console.error('Error loading cart:', error);
+            }
+        }
+
+        function renderCart() {
+            const cartList = document.getElementById('cart-list');
+            const emptyCart = document.getElementById('empty-cart');
+
+            if (cartItems.length === 0) {
+                cartList.style.display = 'none';
+                emptyCart.style.display = 'block';
+                updateSummary();
+                return;
+            }
+
+            cartList.style.display = 'block';
+            emptyCart.style.display = 'none';
+
+            cartList.innerHTML = cartItems.map(item => `
+                <div class="cart-item" data-id="${item.id}">
+                    <img src="http://localhost:5000/${item.image}" alt="${item.name}" class="item-image">
+                    <div class="item-details">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-price">${item.price.toLocaleString('vi-VN')} VNĐ</div>
+                    </div>
+                    <div class="quantity-controls">
+                        <button class="qty-btn" onclick="decreaseQuantity(${item.id})">-</button>
+                        <span class="quantity">${item.quantity}</span>
+                        <button class="qty-btn" onclick="increaseQuantity(${item.id})">+</button>
+                    </div>
+                    <button class="remove-btn" onclick="removeItem(${item.id})">🗑️ Xóa</button>
+                </div>
+            `).join('');
+
+            updateSummary();
+        }
+
+        async function increaseQuantity(cartId) {
+            const item = cartItems.find(item => item.id === cartId);
+            if (item) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/cart/update`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            cart_id: cartId,
+                            quantity: item.quantity + 1
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        loadCart();
+                    }
+                } catch (error) {
+                    console.error('Error updating quantity:', error);
+                }
+            }
+        }
+
+        async function decreaseQuantity(cartId) {
+            const item = cartItems.find(item => item.id === cartId);
+            if (item && item.quantity > 1) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/cart/update`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            cart_id: cartId,
+                            quantity: item.quantity - 1
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        loadCart();
+                    }
+                } catch (error) {
+                    console.error('Error updating quantity:', error);
+                }
+            }
+        }
+
+        async function removeItem(cartId) {
+            if (confirm('Bạn có chắc muốn xóa món này khỏi giỏ hàng?')) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/cart/${cartId}`, {
+                        method: 'DELETE'
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        loadCart();
+                    }
+                } catch (error) {
+                    console.error('Error removing item:', error);
+                }
+            }
+        }
+
+        function updateSummary() {
+            const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const deliveryFee = cartItems.length > 0 ? 30000 : 0;
+            const total = subtotal + deliveryFee;
+
+            document.getElementById('subtotal').textContent = subtotal.toLocaleString('vi-VN') + ' VNĐ';
+            document.getElementById('total').textContent = total.toLocaleString('vi-VN') + ' VNĐ';
+        }
+
+        async function checkout() {
+            if (cartItems.length === 0) {
+                alert('Giỏ hàng của bạn đang trống!');
+                return;
+            }
+
+            const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const total = subtotal + 30000;
+
+            const btn = document.querySelector('.checkout-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Đang xử lý...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: currentUser.id,
+                        total_amount: total
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('🎉 Đặt hàng thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.');
+                    cartItems = [];
+                    renderCart();
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('Lỗi khi đặt hàng');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Initialize page
+        checkAuth();
+        loadCart();
+    </script>
+</body>
+</html>
