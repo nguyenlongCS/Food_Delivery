@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -7,8 +7,27 @@ import os
 app = Flask(__name__)
 CORS(app)
 
+# -------------------------
+# Configuration
+# -------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOADS_DIR = os.path.join(BASE_DIR, 'uploads')
 
+# Tạo folder uploads nếu chưa tồn tại
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+
+# -------------------------
+# Serve uploaded images
+# -------------------------
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(UPLOADS_DIR, filename)
+
+
+# -------------------------
 # Database connection
+# -------------------------
 def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
@@ -18,7 +37,9 @@ def get_db_connection():
     )
 
 
+# -------------------------
 # User registration
+# -------------------------
 @app.route("/api/register", methods=["POST"])
 def register():
     data = request.json
@@ -48,7 +69,9 @@ def register():
         db.close()
 
 
+# -------------------------
 # User login
+# -------------------------
 @app.route("/api/login", methods=["POST"])
 def login():
     data = request.json
@@ -79,7 +102,9 @@ def login():
         db.close()
 
 
+# -------------------------
 # Get menu items
+# -------------------------
 @app.route("/api/menu", methods=["GET"])
 def get_menu():
     try:
@@ -95,7 +120,9 @@ def get_menu():
         db.close()
 
 
-# Add to cart
+# -------------------------
+# Cart operations
+# -------------------------
 @app.route("/api/cart", methods=["POST"])
 def add_to_cart():
     data = request.json
@@ -106,8 +133,6 @@ def add_to_cart():
     try:
         db = get_db_connection()
         cursor = db.cursor()
-
-        # Check if item already exists in cart
         cursor.execute(
             "SELECT * FROM cart WHERE user_id=%s AND item_id=%s",
             (user_id, item_id)
@@ -134,7 +159,6 @@ def add_to_cart():
         db.close()
 
 
-# Get cart items
 @app.route("/api/cart/<int:user_id>", methods=["GET"])
 def get_cart(user_id):
     try:
@@ -155,7 +179,6 @@ def get_cart(user_id):
         db.close()
 
 
-# Update cart quantity
 @app.route("/api/cart/update", methods=["PUT"])
 def update_cart():
     data = request.json
@@ -178,7 +201,6 @@ def update_cart():
         db.close()
 
 
-# Remove from cart
 @app.route("/api/cart/<int:cart_id>", methods=["DELETE"])
 def remove_from_cart(cart_id):
     try:
@@ -194,7 +216,9 @@ def remove_from_cart(cart_id):
         db.close()
 
 
-# Create order
+# -------------------------
+# Orders
+# -------------------------
 @app.route("/api/order", methods=["POST"])
 def create_order():
     data = request.json
@@ -204,7 +228,6 @@ def create_order():
     try:
         db = get_db_connection()
         cursor = db.cursor()
-
         # Create order
         cursor.execute(
             "INSERT INTO orders (user_id, total_amount, status) VALUES (%s, %s, 'pending')",
@@ -233,5 +256,8 @@ def create_order():
         db.close()
 
 
+# -------------------------
+# Run app
+# -------------------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
