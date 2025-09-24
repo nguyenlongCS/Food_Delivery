@@ -103,7 +103,7 @@ def login():
 
 
 # -------------------------
-# Get menu items
+# Get menu items - FIX IMAGE PATH
 # -------------------------
 @app.route("/api/menu", methods=["GET"])
 def get_menu():
@@ -112,6 +112,14 @@ def get_menu():
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM menu_items")
         items = cursor.fetchall()
+
+        # Fix image paths
+        for item in items:
+            if item.get('image'):
+                # Ensure image path starts with 'uploads/'
+                if not item['image'].startswith('uploads/'):
+                    item['image'] = f"uploads/{item['image']}"
+
         return jsonify({"success": True, "items": items})
     except mysql.connector.Error as e:
         return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
@@ -171,6 +179,13 @@ def get_cart(user_id):
             WHERE c.user_id = %s
         """, (user_id,))
         cart_items = cursor.fetchall()
+
+        # Fix image paths
+        for item in cart_items:
+            if item.get('image'):
+                if not item['image'].startswith('uploads/'):
+                    item['image'] = f"uploads/{item['image']}"
+
         return jsonify({"success": True, "items": cart_items})
     except mysql.connector.Error as e:
         return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
