@@ -236,38 +236,59 @@ def remove_from_cart(cart_id):
 def create_order():
     data = request.json
     user_id = data.get("user_id")
-    total_amount = data.get("total_amount")
 
     try:
         db = get_db_connection()
-        cursor = db.cursor()
-        # Create order
-        cursor.execute(
-            "INSERT INTO orders (user_id, total_amount, status) VALUES (%s, %s, 'pending')",
-            (user_id, total_amount)
-        )
-        order_id = cursor.lastrowid
+        cursor = db.cursor(dictionary=True)
 
-        # Move cart items to order_items
+        # Lấy giỏ hàng theo user
         cursor.execute("""
-            INSERT INTO order_items (order_id, item_id, quantity, price)
-            SELECT %s, c.item_id, c.quantity, m.price
+            SELECT c.item_id, c.quantity, m.price, m.restaurant
             FROM cart c
             JOIN menu_items m ON c.item_id = m.id
             WHERE c.user_id = %s
-        """, (order_id, user_id))
+        """, (user_id,))
+        cart_items = cursor.fetchall()
 
-        # Clear cart
+        if not cart_items:
+            return jsonify({"success": False, "message": "Giỏ hàng trống!"})
+
+        # Nhóm theo restaurant
+        restaurant_groups = {}
+        for item in cart_items:
+            restaurant = item["restaurant"]
+            if restaurant not in restaurant_groups:
+                restaurant_groups[restaurant] = []
+            restaurant_groups[restaurant].append(item)
+
+        created_orders = []
+
+        # Tạo 1 đơn cho mỗi nhà hàng
+        for restaurant, items in restaurant_groups.items():
+            total_amount = sum(i["price"] * i["quantity"] for i in items)
+            cursor.execute(
+                "INSERT INTO orders (user_id, restaurant_id, total_amount, status) VALUES (%s, %s, %s, 'pending')",
+                (user_id, restaurant, total_amount)
+            )
+            order_id = cursor.lastrowid
+
+            # Thêm các món vào order_items
+            for i in items:
+                cursor.execute(
+                    "INSERT INTO order_items (order_id, item_id, quantity, price) VALUES (%s, %s, %s, %s)",
+                    (order_id, i["item_id"], i["quantity"], i["price"])
+                )
+
+            created_orders.append(order_id)
+
+        # Xóa giỏ hàng
         cursor.execute("DELETE FROM cart WHERE user_id = %s", (user_id,))
-
         db.commit()
-        return jsonify({"success": True, "message": "Đặt hàng thành công!", "order_id": order_id})
-    except mysql.connector.Error as e:
-        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
+
+        return jsonify({"success": True, "message": "Đặt hàng thành công!", "orders": created_orders})
     finally:
         cursor.close()
         db.close()
-
 
 # Lấy đơn hàng của 1 user (khách hàng)
 @app.route("/api/orders/user/<int:user_id>", methods=["GET"])
