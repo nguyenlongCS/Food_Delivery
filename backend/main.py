@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import mysql.connector
-from werkzeug.security import generate_password_hash, check_password_hash
 import os
 
 app = Flask(__name__)
@@ -51,14 +50,12 @@ def register():
     if password != confirm_password:
         return jsonify({"success": False, "message": "Mật khẩu xác nhận không khớp!"})
 
-    hashed_pw = generate_password_hash(password)
-
     try:
         db = get_db_connection()
         cursor = db.cursor()
         cursor.execute(
             "INSERT INTO user (username, email, password, role) VALUES (%s, %s, %s, %s)",
-            (username, email, hashed_pw, "user")
+            (username, email, password, "user")
         )
         db.commit()
         return jsonify({"success": True, "message": "Đăng ký thành công!"})
@@ -84,13 +81,14 @@ def login():
         cursor.execute("SELECT * FROM user WHERE username=%s", (username,))
         user = cursor.fetchone()
 
-        if user and check_password_hash(user["password"], password):
+        if user and user["password"] == password:
             return jsonify({
                 "success": True,
                 "user": {
                     "id": user["id"],
                     "username": user["username"],
-                    "email": user["email"]
+                    "email": user["email"],
+                    "role": user["role"]
                 }
             })
         else:
