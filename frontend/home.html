@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Delivery</title>
+    <link rel="stylesheet" href="home.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Food Delivery</h1>
+            <nav>
+                <ul>
+                    <li><a href="cart.html" id="cart">Giỏ Hàng (<span id="cart-count">0</span>)</a></li>
+                    <li><a href="orders.html" id="orders">Đơn Hàng</a></li>
+                    <li><a href="#" class="logout-btn" onclick="logout()">Đăng Xuất</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section id="hero">
+        <div class="container">
+            <h2 id="welcome-message">Chào mừng!</h2>
+            <h3>Đồ Ăn Ngon, Giao Hàng Nhanh!</h3>
+            <p>Đặt món ăn yêu thích từ các nhà hàng hàng đầu trong khu vực của bạn.</p>
+            <button onclick="scrollToMenu()">Khám Phá Thực Đơn</button>
+        </div>
+    </section>
+
+    <section id="menu">
+        <div class="container">
+            <h2>Thực Đơn Của Chúng Tôi</h2>
+
+            <div class="menu-btn-container">
+                <a href="menu.html" class="menu-btn">Xem Thực Đơn Đầy Đủ</a>
+            </div>
+
+            <div id="menu-items" class="menu-items">
+                <!-- Menu items will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Food Delivery. Mọi quyền được bảo lưu.</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        let currentUser = null;
+
+        // Check authentication
+        function checkAuth() {
+            const user = localStorage.getItem('user');
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            currentUser = JSON.parse(user);
+            document.getElementById('welcome-message').textContent = `Chào mừng ${currentUser.username}!`;
+
+            // Cập nhật text menu đơn hàng dựa trên role
+            const ordersLink = document.getElementById('orders');
+            if (currentUser.role === 'restaurant') {
+                ordersLink.textContent = 'Quản Lý Đơn';
+            }
+
+            loadCartCount();
+        }
+
+        // Load cart count
+        async function loadCartCount() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/cart/${currentUser.id}`);
+                const data = await response.json();
+                if (data.success) {
+                    const totalItems = data.items.reduce((sum, item) => sum + item.quantity, 0);
+                    document.getElementById('cart-count').textContent = totalItems;
+                }
+            } catch (error) {
+                console.error('Error loading cart count:', error);
+            }
+        }
+
+        // Load menu items
+        async function loadMenu() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/menu`);
+                const data = await response.json();
+                if (data.success) {
+                    displayMenuItems(data.items.slice(0, 3)); // Show first 3 items
+                }
+            } catch (error) {
+                console.error('Error loading menu:', error);
+            }
+        }
+
+        // Display menu items
+        function displayMenuItems(items) {
+            const menuContainer = document.getElementById('menu-items');
+            menuContainer.innerHTML = items.map(item => `
+                <div class="menu-item">
+                    <img src="http://localhost:5000/${item.image}" alt="${item.name}">
+                    <h3>${item.name}</h3>
+                    <p>${item.description}</p>
+                    <p class="price">${item.price.toLocaleString('vi-VN')} VNĐ</p>
+                    <button onclick="addToCart(${item.id}, '${item.name}', ${item.price})">Thêm vào Giỏ</button>
+                </div>
+            `).join('');
+        }
+
+        // Add to cart
+        async function addToCart(itemId, itemName, price) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/cart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: currentUser.id,
+                        item_id: itemId,
+                        quantity: 1
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(`${itemName} đã được thêm vào giỏ hàng! Giá: ${price.toLocaleString('vi-VN')} VNĐ`);
+                    loadCartCount();
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('Lỗi khi thêm vào giỏ hàng');
+            }
+        }
+
+        function scrollToMenu() {
+            document.getElementById('menu').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+        }
+
+        // Initialize page
+        checkAuth();
+        loadMenu();
+    </script>
+</body>
+</html>

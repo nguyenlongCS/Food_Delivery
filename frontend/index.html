@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giao Đồ Ăn - Đăng Nhập/Đăng Ký</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <!-- Flash Messages -->
+            <div id="flash-messages" class="flash-messages" style="display: none;">
+                <div id="flash-message" class="flash-message"></div>
+            </div>
+
+            <!-- Form Đăng Nhập -->
+            <form id="login-form" class="form active">
+                <h2>Đăng Nhập</h2>
+                <input type="text" id="login-username" placeholder="Tên đăng nhập" required>
+                <input type="password" id="login-password" placeholder="Mật khẩu" required>
+                <button type="submit">Đăng Nhập</button>
+                <p>Bạn chưa có tài khoản? <a href="#" onclick="toggleForm()">Đăng Ký</a></p>
+            </form>
+
+            <!-- Form Đăng Ký -->
+            <form id="register-form" class="form">
+                <h2>Đăng Ký</h2>
+                <input type="text" id="register-username" placeholder="Tên đăng nhập" required>
+                <input type="email" id="register-email" placeholder="Email" required>
+                <input type="password" id="register-password" placeholder="Mật khẩu" required>
+                <input type="password" id="register-confirm-password" placeholder="Xác nhận mật khẩu" required>
+                <button type="submit">Đăng Ký</button>
+                <p>Đã có tài khoản? <a href="#" onclick="toggleForm()">Đăng Nhập</a></p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+
+        function toggleForm() {
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            loginForm.classList.toggle('active');
+            registerForm.classList.toggle('active');
+            hideFlashMessage();
+        }
+
+        function showFlashMessage(message, type = 'error') {
+            const flashMessages = document.getElementById('flash-messages');
+            const flashMessage = document.getElementById('flash-message');
+
+            flashMessage.textContent = message;
+            flashMessage.className = `flash-message flash-${type}`;
+            flashMessages.style.display = 'block';
+        }
+
+        function hideFlashMessage() {
+            document.getElementById('flash-messages').style.display = 'none';
+        }
+
+        // Handle login
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = 'home.html';
+                } else {
+                    showFlashMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showFlashMessage('Lỗi kết nối server', 'error');
+            }
+        });
+
+        // Handle register
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirm_password = document.getElementById('register-confirm-password').value;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password, confirm_password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showFlashMessage(data.message, 'success');
+                    toggleForm();
+                    document.getElementById('register-form').reset();
+                } else {
+                    showFlashMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showFlashMessage('Lỗi kết nối server', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

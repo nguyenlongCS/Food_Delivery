@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn Hàng - Food Delivery</title>
+    <link rel="stylesheet" href="cart.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1 id="page-title">📦 Đơn Hàng Của Tôi</h1>
+            <a href="home.html" class="back-btn">← Quay Lại</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="cart-container">
+            <div id="order-list" class="cart-items">
+                <!-- Orders will be loaded here -->
+            </div>
+            <div id="empty-orders" class="empty-cart" style="display: none;">
+                <div class="empty-cart-icon">📦</div>
+                <h3>Chưa có đơn hàng nào</h3>
+                <p>Hãy đặt món để xem đơn hàng tại đây!</p>
+                <a href="menu.html" class="continue-shopping">Đặt Món Ngay</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        let currentUser = null;
+
+        // Check authentication
+        function checkAuth() {
+            const user = localStorage.getItem('user');
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            currentUser = JSON.parse(user);
+
+            // Kiểm tra role và cập nhật tiêu đề
+            if (currentUser.role === 'restaurant') {
+                document.getElementById('page-title').innerHTML = '📋 Quản Lý Đơn Hàng';
+                loadRestaurantOrders();
+            } else {
+                loadUserOrders();
+            }
+        }
+
+        // Load orders for regular users
+        async function loadUserOrders() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/orders/user/${currentUser.id}`);
+                const data = await response.json();
+                
+                if (data.success && data.orders.length > 0) {
+                    displayUserOrders(data.orders);
+                } else {
+                    showEmptyState();
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                showEmptyState();
+            }
+        }
+
+        // Load orders for restaurant users
+        async function loadRestaurantOrders() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/orders/restaurant/${currentUser.username}`);
+                const data = await response.json();
+                
+                if (data.success && data.orders.length > 0) {
+                    displayRestaurantOrders(data.orders);
+                } else {
+                    showEmptyState();
+                }
+            } catch (error) {
+                console.error('Error loading restaurant orders:', error);
+                showEmptyState();
+            }
+        }
+
+        // Display orders for regular users
+        function displayUserOrders(orders) {
+            const orderList = document.getElementById('order-list');
+            const emptyOrders = document.getElementById('empty-orders');
+            
+            orderList.style.display = 'block';
+            emptyOrders.style.display = 'none';
+
+            orderList.innerHTML = `
+                <h2>📋 Lịch Sử Đơn Hàng</h2>
+                ${orders.map(order => `
+                    <div class="cart-item">
+                        <div class="item-details">
+                            <div class="item-name">Mã đơn: #${order.id}</div>
+                            <div style="margin: 5px 0;">
+                                <strong>Nhà hàng:</strong> ${order.restaurant || 'N/A'}
+                            </div>
+                            <div style="margin: 5px 0;">
+                                <strong>Ngày đặt:</strong> ${new Date(order.created_at).toLocaleString('vi-VN')}
+                            </div>
+                            <div style="margin: 5px 0;">
+                                <strong>Tổng tiền:</strong> ${order.total_amount.toLocaleString('vi-VN')} VNĐ
+                            </div>
+                            <div style="margin: 5px 0;">
+                                <strong>Trạng thái:</strong> 
+                                <span class="status-${order.status}">
+                                    ${getStatusText(order.status)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // Display orders for restaurant users
+        function displayRestaurantOrders(orders) {
+            const orderList = document.getElementById('order-list');
+            const emptyOrders = document.getElementById('empty-orders');
+            
+            orderList.style.display = 'block';
+            emptyOrders.style.display = 'none';
+
+            orderList.innerHTML = `
+                <h2>📋 Đơn Hàng Cần Xử Lý</h2>
+                ${orders.map(order => `
+                    <div class="cart-item">
+                        <div class="item-details">
+                            <div class="item-name">Đơn hàng #${order.id}</div>
+                            <div style="margin: 5px 0;">
+                                <strong>Khách hàng:</strong> ${order.username}
+                            </div>
+                            <div style="margin: 5px 0;">
+                                <strong>Ngày đặt:</strong> ${new Date(order.created_at).toLocaleString('vi-VN')}
+                            </div>
+                            <div style="margin: 5px 0;">
+                                <strong>Tổng tiền:</strong> ${order.total_amount.toLocaleString('vi-VN')} VNĐ
+                            </div>
+                            <div style="margin: 5px 0;">
+                                <strong>Trạng thái:</strong> 
+                                <span class="status-${order.status}">
+                                    ${getStatusText(order.status)}
+                                </span>
+                            </div>
+                        </div>
+                        ${order.status === 'pending' ? `
+                            <div class="quantity-controls" style="gap: 10px;">
+                                <button class="checkout-btn" onclick="updateOrderStatus(${order.id}, 'confirmed')" style="background: #10ac84; padding: 8px 16px;">
+                                    ✅ Xác Nhận
+                                </button>
+                                <button class="remove-btn" onclick="updateOrderStatus(${order.id}, 'cancelled')" style="padding: 8px 16px;">
+                                    ❌ Hủy Đơn
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // Show empty state
+        function showEmptyState() {
+            const orderList = document.getElementById('order-list');
+            const emptyOrders = document.getElementById('empty-orders');
+            
+            orderList.style.display = 'none';
+            emptyOrders.style.display = 'block';
+
+            if (currentUser.role === 'restaurant') {
+                document.querySelector('#empty-orders h3').textContent = 'Chưa có đơn hàng nào';
+                document.querySelector('#empty-orders p').textContent = 'Các đơn hàng từ khách hàng sẽ hiển thị tại đây!';
+                document.querySelector('#empty-orders .continue-shopping').style.display = 'none';
+            }
+        }
+
+        // Get status text in Vietnamese
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '⏳ Chờ xác nhận',
+                'confirmed': '✅ Đã xác nhận', 
+                'cancelled': '❌ Đã hủy'
+            };
+            return statusMap[status] || status;
+        }
+
+        // Update order status (for restaurant)
+        async function updateOrderStatus(orderId, status) {
+            const confirmMessage = status === 'confirmed' ? 
+                'Bạn có chắc muốn xác nhận đơn hàng này?' : 
+                'Bạn có chắc muốn hủy đơn hàng này?';
+            
+            if (!confirm(confirmMessage)) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('Cập nhật trạng thái thành công!');
+                    loadRestaurantOrders(); // Reload orders
+                } else {
+                    alert(data.message || 'Có lỗi xảy ra');
+                }
+            } catch (error) {
+                alert('Lỗi khi cập nhật trạng thái');
+                console.error('Error updating order status:', error);
+            }
+        }
+
+        // Initialize page
+        checkAuth();
+    </script>
+
+    <style>
+        .status-pending {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        .status-confirmed {
+            color: #10ac84;
+            font-weight: bold;
+        }
+        .status-cancelled {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</body>
+</html>
