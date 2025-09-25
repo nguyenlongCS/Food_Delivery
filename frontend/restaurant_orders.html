@@ -16,25 +16,25 @@
     <div id="order-list"></div>
   </div>
 <script>
-const API_BASE_URL = 'http://localhost:5000/api';
-let currentUser = null;
-
 function checkAuth() {
   const user = localStorage.getItem('user');
   if (!user) { window.location.href = 'index.html'; return; }
   currentUser = JSON.parse(user);
+
   if (currentUser.role !== "restaurant") {
-    alert("Bạn không có quyền!"); window.location.href="home.html";
+    alert("Bạn không có quyền!");
+    window.location.href="home.html";
   }
 }
 
 async function loadOrders() {
-  // Lấy tên nhà hàng từ user hiện tại
-  const restaurantName = currentUser.username;
-
+  const restaurantName = currentUser.username;  // tên user = tên nhà hàng
   const res = await fetch(`${API_BASE_URL}/orders/restaurant/${restaurantName}`);
+  if (!res.ok) {
+    console.error("API error", res.status);
+    return;
+  }
   const data = await res.json();
-
   if (data.success) {
     document.getElementById('order-list').innerHTML = data.orders.map(o => `
       <div class="cart-item">
