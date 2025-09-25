@@ -29,8 +29,12 @@ function checkAuth() {
 }
 
 async function loadOrders() {
-  const res = await fetch(`${API_BASE_URL}/orders/restaurant`);
+  // Lấy tên nhà hàng từ user hiện tại
+  const restaurantName = currentUser.username;
+
+  const res = await fetch(`${API_BASE_URL}/orders/restaurant/${restaurantName}`);
   const data = await res.json();
+
   if (data.success) {
     document.getElementById('order-list').innerHTML = data.orders.map(o => `
       <div class="cart-item">
