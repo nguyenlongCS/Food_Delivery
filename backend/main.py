@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
+from werkzeug.utils import secure_filename
 from flask_cors import CORS
 import mysql.connector
 import os
@@ -118,7 +119,49 @@ def get_menu():
     finally:
         cursor.close()
         db.close()
+# -------------------------
+# Post menu items
+# -------------------------
+@app.route("/api/menu", methods=["POST"])
+def add_menu_item():
+    try:
+        # Lấy dữ liệu form
+        name = request.form.get("name")
+        price = request.form.get("price")
+        description = request.form.get("description")
+        category = request.form.get("category")
+        delivery_time = request.form.get("delivery_time")
+        distance = request.form.get("distance")
+        badge = request.form.get("badge")
+        restaurant = request.form.get("restaurant")
 
+        # Lấy file ảnh
+        image = request.files.get("image")
+        if not image:
+            return jsonify({"success": False, "message": "Thiếu hình ảnh!"})
+
+        # Lưu file ảnh vào /uploads
+        filename = secure_filename(image.filename)
+        filepath = os.path.join(UPLOADS_DIR, filename)
+        image.save(filepath)
+
+        # Lưu vào database
+        db = get_db_connection()
+        cursor = db.cursor()
+        cursor.execute("""
+            INSERT INTO menu_items (name, price, description, category, delivery_time, distance, badge, restaurant, image)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (name, price, description, category, delivery_time, distance, badge, restaurant, f"uploads/{filename}"))
+        db.commit()
+
+        return jsonify({"success": True, "message": "Thêm món thành công!"})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "message": f"Lỗi database: {str(e)}"})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if 'db' in locals(): db.close()
 # -------------------------
 # Cart operations
 # -------------------------
