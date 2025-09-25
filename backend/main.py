@@ -15,14 +15,12 @@ UPLOADS_DIR = os.path.join(BASE_DIR, 'uploads')
 # Tạo folder uploads nếu chưa tồn tại
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
-
 # -------------------------
 # Serve uploaded images
 # -------------------------
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(UPLOADS_DIR, filename)
-
 
 # -------------------------
 # Database connection
@@ -34,7 +32,6 @@ def get_db_connection():
         password="longga1505",
         database="FoodDelivery"
     )
-
 
 # -------------------------
 # User registration
@@ -64,7 +61,6 @@ def register():
     finally:
         cursor.close()
         db.close()
-
 
 # -------------------------
 # User login
@@ -99,9 +95,8 @@ def login():
         cursor.close()
         db.close()
 
-
 # -------------------------
-# Get menu items - FIX IMAGE PATH
+# Get menu items
 # -------------------------
 @app.route("/api/menu", methods=["GET"])
 def get_menu():
@@ -114,7 +109,6 @@ def get_menu():
         # Fix image paths
         for item in items:
             if item.get('image'):
-                # Ensure image path starts with 'uploads/'
                 if not item['image'].startswith('uploads/'):
                     item['image'] = f"uploads/{item['image']}"
 
@@ -124,7 +118,6 @@ def get_menu():
     finally:
         cursor.close()
         db.close()
-
 
 # -------------------------
 # Cart operations
@@ -164,7 +157,6 @@ def add_to_cart():
         cursor.close()
         db.close()
 
-
 @app.route("/api/cart/<int:user_id>", methods=["GET"])
 def get_cart(user_id):
     try:
@@ -191,7 +183,6 @@ def get_cart(user_id):
         cursor.close()
         db.close()
 
-
 @app.route("/api/cart/update", methods=["PUT"])
 def update_cart():
     data = request.json
@@ -213,7 +204,6 @@ def update_cart():
         cursor.close()
         db.close()
 
-
 @app.route("/api/cart/<int:cart_id>", methods=["DELETE"])
 def remove_from_cart(cart_id):
     try:
@@ -227,7 +217,6 @@ def remove_from_cart(cart_id):
     finally:
         cursor.close()
         db.close()
-
 
 # -------------------------
 # Orders
@@ -265,7 +254,7 @@ def create_order():
 
         # Tạo 1 đơn cho mỗi nhà hàng
         for restaurant, items in restaurant_groups.items():
-            total_amount = sum(i["price"] * i["quantity"] for i in items)
+            total_amount = sum(i["price"] * i["quantity"] for i in items) + 30000  # Cộng phí ship
             cursor.execute(
                 "INSERT INTO orders (user_id, restaurant, total_amount, status) VALUES (%s, %s, %s, 'pending')",
                 (user_id, restaurant, total_amount)
@@ -286,6 +275,8 @@ def create_order():
         db.commit()
 
         return jsonify({"success": True, "message": "Đặt hàng thành công!", "orders": created_orders})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
     finally:
         cursor.close()
         db.close()
@@ -297,18 +288,20 @@ def get_user_orders(user_id):
         db = get_db_connection()
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
-            SELECT o.id, o.total_amount, o.status, o.created_at
+            SELECT o.id, o.restaurant, o.total_amount, o.status, o.created_at
             FROM orders o
             WHERE o.user_id = %s
             ORDER BY o.created_at DESC
         """, (user_id,))
         orders = cursor.fetchall()
         return jsonify({"success": True, "orders": orders})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
     finally:
         cursor.close()
         db.close()
 
-# Lấy tất cả đơn hàng (cho nhà hàng)
+# Lấy tất cả đơn hàng (cho nhà hàng) - ĐÃ SỬA LỖI
 @app.route("/api/orders/restaurant/<restaurant_name>", methods=["GET"])
 def get_restaurant_orders(restaurant_name):
     try:
@@ -323,6 +316,8 @@ def get_restaurant_orders(restaurant_name):
         """, (restaurant_name,))
         orders = cursor.fetchall()
         return jsonify({"success": True, "orders": orders})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
     finally:
         cursor.close()
         db.close()
@@ -339,6 +334,8 @@ def update_order_status(order_id):
         cursor.execute("UPDATE orders SET status=%s WHERE id=%s", (status, order_id))
         db.commit()
         return jsonify({"success": True, "message": "Cập nhật trạng thái thành công!"})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "message": f"Lỗi: {str(e)}"})
     finally:
         cursor.close()
         db.close()
