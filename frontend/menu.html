@@ -10,7 +10,10 @@
 <div class="header">
     <div class="header-content">
         <h1>🍽️ Thực Đơn Đầy Đủ</h1>
-        <a href="home.html" class="back-btn">← Quay Lại</a>
+        <div class="header-buttons">
+            <button id="addMenuBtn" class="add-menu-btn" style="display:none;">➕ Đăng Món</button>
+            <a href="home.html" class="back-btn">← Quay Lại</a>
+        </div>
     </div>
 </div>
 
@@ -26,9 +29,9 @@
                 <label class="filter-label">Khoảng cách</label>
                 <select class="filter-select" id="distanceFilter">
                     <option value="">Tất cả</option>
-                    <option value="near">Gần nhất (&lt; 2km)</option>
+                    <option value="near">Gần nhất (< 2km)</option>
                     <option value="medium">Trung bình (2-5km)</option>
-                    <option value="far">Xa (&gt; 5km)</option>
+                    <option value="far">Xa (> 5km)</option>
                 </select>
             </div>
 
@@ -47,9 +50,9 @@
                 <label class="filter-label">Giá</label>
                 <select class="filter-select" id="priceFilter">
                     <option value="">Tất cả</option>
-                    <option value="budget">Tiết kiệm (&lt; 200k)</option>
+                    <option value="budget">Tiết kiệm (< 200k)</option>
                     <option value="medium">Trung bình (200k-400k)</option>
-                    <option value="premium">Cao cấp (&gt; 400k)</option>
+                    <option value="premium">Cao cấp (> 400k)</option>
                 </select>
             </div>
 
@@ -70,6 +73,79 @@
     </div>
 </div>
 
+<!-- Modal đăng món -->
+<div id="addMenuModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📝 Đăng Món Ăn Mới</h2>
+            <span class="close">&times;</span>
+        </div>
+        <form id="addMenuForm" enctype="multipart/form-data">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tên món ăn *</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Giá (VND) *</label>
+                    <input type="number" name="price" min="1000" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Mô tả món ăn</label>
+                <textarea name="description" rows="3"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Danh mục</label>
+                    <select name="category">
+                        <option value="vietnamese">Việt Nam</option>
+                        <option value="pizza">Pizza</option>
+                        <option value="burger">Burger</option>
+                        <option value="sushi">Sushi</option>
+                        <option value="chicken">Gà</option>
+                        <option value="pasta">Pasta</option>
+                        <option value="japanese">Nhật Bản</option>
+                        <option value="other">Khác</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Thời gian giao (phút)</label>
+                    <input type="number" name="delivery_time" value="30" min="10" max="120">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Khoảng cách (km)</label>
+                    <input type="number" name="distance" value="1.0" min="0.1" max="50" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Badge</label>
+                    <select name="badge">
+                        <option value="">Không</option>
+                        <option value="popular">🔥 Bán chạy</option>
+                        <option value="new">🆕 Mới</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Hình ảnh món ăn *</label>
+                <input type="file" name="image" accept="image/*" required>
+                <div class="image-preview" id="imagePreview"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="cancel-btn">Hủy</button>
+                <button type="submit" class="submit-btn">🍽️ Đăng Món</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     const API_BASE_URL = 'http://localhost:5000/api';
     let menuItems = [];
@@ -84,6 +160,11 @@
             return;
         }
         currentUser = JSON.parse(user);
+
+        // Hiển thị nút đăng món nếu là restaurant
+        if (currentUser.role === 'restaurant') {
+            document.getElementById('addMenuBtn').style.display = 'block';
+        }
     }
 
     // Load menu items
@@ -123,7 +204,7 @@
                     <div class="item-header">
                         <div>
                             <div class="item-name">${item.name}</div>
-                            <div class="item-restaurant">📍 ${item.restaurant}</div>
+                            <div class="item-restaurant">🏪 ${item.restaurant}</div>
                             <div class="item-rating">
                                 <span class="stars">${'⭐'.repeat(Math.floor(item.rating))}</span>
                                 <span class="rating-text">${item.rating} (${item.reviews} đánh giá)</span>
@@ -234,12 +315,80 @@
         }
     }
 
+    // Modal functions
+    function openModal() {
+        document.getElementById('addMenuModal').style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('addMenuModal').style.display = 'none';
+        document.getElementById('addMenuForm').reset();
+        document.getElementById('imagePreview').innerHTML = '';
+    }
+
+    // Image preview
+    function handleImagePreview(event) {
+        const file = event.target.files[0];
+        const preview = document.getElementById('imagePreview');
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.innerHTML = `<img src="${e.target.result}" alt="Preview" style="max-width: 200px; max-height: 150px; border-radius: 8px;">`;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.innerHTML = '';
+        }
+    }
+
+    // Submit new menu item
+    async function submitMenuItem(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        formData.append('restaurant', currentUser.username);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/menu`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('🎉 Đăng món thành công!');
+                closeModal();
+                loadMenu(); // Reload menu
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            alert('Lỗi khi đăng món: ' + error.message);
+        }
+    }
+
     // Event listeners
     document.getElementById('searchInput').addEventListener('input', filterAndSort);
     document.getElementById('distanceFilter').addEventListener('change', filterAndSort);
     document.getElementById('sortFilter').addEventListener('change', filterAndSort);
     document.getElementById('priceFilter').addEventListener('change', filterAndSort);
     document.getElementById('ratingFilter').addEventListener('change', filterAndSort);
+
+    // Modal event listeners
+    document.getElementById('addMenuBtn').addEventListener('click', openModal);
+    document.querySelector('.close').addEventListener('click', closeModal);
+    document.querySelector('.cancel-btn').addEventListener('click', closeModal);
+    document.querySelector('input[name="image"]').addEventListener('change', handleImagePreview);
+    document.getElementById('addMenuForm').addEventListener('submit', submitMenuItem);
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('addMenuModal');
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
