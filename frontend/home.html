@@ -14,6 +14,7 @@
                 <ul>
                     <li><a href="#menu">Thực Đơn</a></li>
                     <li><a href="cart.html" id="cart">Giỏ Hàng (<span id="cart-count">0</span>)</a></li>
+                    <li><a href="orders.html" id="orders">Đơn Hàng</a></li>
                     <li><a href="#" class="logout-btn" onclick="logout()">Đăng Xuất</a></li>
                 </ul>
             </nav>
@@ -62,6 +63,13 @@
             }
             currentUser = JSON.parse(user);
             document.getElementById('welcome-message').textContent = `Chào mừng ${currentUser.username}!`;
+
+            // Cập nhật text menu đơn hàng dựa trên role
+            const ordersLink = document.getElementById('orders');
+            if (currentUser.role === 'restaurant') {
+                ordersLink.textContent = 'Quản Lý Đơn';
+            }
+
             loadCartCount();
         }
 
